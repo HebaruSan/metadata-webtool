@@ -4,7 +4,7 @@
 */
 "use strict";
 
-var spec_versions = [1, "v1.0", "v1.1", "v1.2", "v1.3", "v1.4", "v1.5", "v1.6", "v1.7", "v1.8", "v1.9", "v1.10", "v1.11", "v1.12", "v1.13", "v1.14", "v1.15", "v1.16", "v1.17", "v1.18"];
+var spec_versions = [1].concat([...Array(31).keys()].map(v => `v1.${v}`));
 
 var mode;
 
@@ -217,14 +217,23 @@ function generate_netkan() {
     var req_version = 1;
     var o = {};
 
+    // Pre-fill so this is at the top (need to validate the fields to get the true value)
+    o['spec_version'] = '';
 
-    sets(o, "name");
     sets(o, "identifier");
+    sets(o, "name");
     sets(o, "abstract");
+    seta(o, "author");
     seta(o, "license");
     if (o.license) {
         if (o.license.includes("WTFPL")) {
             req_version = latest(req_version, "v1.2");
+        }
+        if (o.license.includes("Unlicense")) {
+            req_version = latest(req_version, "v1.18");
+        }
+        if (o.license.includes("MPL-2.0")) {
+            req_version = latest(req_version, "v1.30");
         }
         if (o.license.length == 1) {
             o.license = o.license[0];
@@ -232,8 +241,8 @@ function generate_netkan() {
             req_version = latest(req_version, "v1.8");
         }
     }
-    seta(o, "author");
     sets(o, "download");
+    sets(o, "version");
     sets(o, "kref", "$kref");
     if ($("#add_vref:checked").val()) {
         o["$vref"] = "#/ckan/ksp-avc";
@@ -267,18 +276,22 @@ function generate_netkan() {
             v = "v1.14";
         } else if (to == "Ships/@thumbs/VAB" || to == "Ships/@thumbs/SPH") {
             v = "v1.16";
+        } else if (to == "Missions") {
+            v = "v1.25";
+        } else if (to == "Ships/Script") {
+            v = "v1.29";
         }
         req_version = latest(req_version, v);
         var d = { "file": normalize_path(file), "install_to": to };
-        /* Deactivate until release of Spec v1.18
         var install_as = $('[name="install_as"]', this).val();
         if (install_as && install_as.length) {
             d["as"] = install_as;
         }
-        */
         install.push(d);
     });
-    o["install"] = install;
+    if (install.length > 0) {
+        o["install"] = install;
+    }
 
     var ksp_ver_raw = get_val("ksp_version");
     var ksp_ver = parse_ref_line("ksp" + ksp_ver_raw);
@@ -298,6 +311,8 @@ function generate_netkan() {
 
 
 
+    seta(o, "provides");
+    setrel(o, "conflicts");
     setrel(o, "depends");
     setrel(o, "recommends");
     setrel(o, "suggests");
@@ -305,8 +320,6 @@ function generate_netkan() {
     if (o.supports && o.supports.length) {
         req_version = latest(req_version, "v1.2");
     }
-    setrel(o, "conflicts");
-    setrel(o, "provides");
 
     var uj = get_val("update_json");
     var ujo;
@@ -370,7 +383,7 @@ function generate_netkan() {
     }
 
 
-    var data = JSON.stringify(o, null, "\t");
+    var data = JSON.stringify(o, null, "    ");
     $("#issue_body").val("\n\n``` JSON\n" + data + "\n```\n");
     $("#json_output").text(data);
 }
